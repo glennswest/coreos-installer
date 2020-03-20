@@ -676,6 +676,8 @@ validate_image() {
 #Wipe any remaining disk labels
 #########################################################
 wipe_target_disk_labels() {
+    log "Preserve existing paritions"
+    sfdisk -d /dev/sda > /tmp/disk-before.sfdisk
     log "Wiping ${DEST_DEV}"
     wipefs --all --force "${DEST_DEV}"
 }

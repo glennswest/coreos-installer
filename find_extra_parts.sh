@@ -11,4 +11,13 @@ echo $cntpartsbefore
 tail -n +5 partitions.before > partitions.extra
 echo "Extra Partitions"
 cat partitions.extra
+head -4 partitions.before > partitions.delete
+echo "Partitions to delete"
+cat partitions.delete
+sed -e '/^$/,$d' < disk-before.sfdisk > head.sfdisk
+cp head.sfdisk mindisk.sfdisk
+echo -en '\n' >> mindisk.sfdisk
+cat partitions.extra >> mindisk.sfdisk
+echo "Blank Partition Table"
+cat mindisk.sfdisk
 
