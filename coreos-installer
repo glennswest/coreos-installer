@@ -725,6 +725,14 @@ echo "Writing mindisk before install"
 sfdisk /dev/sda < /tmp/mindisk.sfdisk
 }
 
+write_extra_partitions() {
+   sfdisk -d /dev/sda > /tmp/disk-after.sfdisk
+   cp /tmp/disk-after.sfdisk /tmp/disk-final.sfdisk
+   cat /tmp/partitions.extra >> /tmp/disk-final.sfdisk
+   sfdisk /dev/sda < /tmp/disk-final.sfdisk
+   echo "Final Result"
+   sfdisk -d /dev/sda
+}
 log() {
     echo "$1" >> /tmp/debug
     echo "$1" >&2
@@ -976,6 +984,9 @@ main() {
 
     # If platform is s390x, update bootloader records
     write_zipl_bootloader
+
+    # Save any extra partitions
+    write_extra_partitions
 
     log "Install complete"
 }
