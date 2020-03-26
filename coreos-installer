@@ -707,9 +707,9 @@ case $firstpart in
      5)
      cp /tmp/disk-before.sfdisk /tmp/mindisk.sfdisk
      ;;
-     0)
+     '')
      echo "Disk is empty - using basic config"
-     cat >> /tmp/mindisk.sfdisk << EOF
+     cat > /tmp/mindisk.sfdisk << EOF
 label: gpt
 label-id: 5DF49930-8329-4F2F-93C8-03D4AB5D1E19
 device: /dev/sda
@@ -718,6 +718,10 @@ first-lba: 34
 
 /dev/sda5 : start=   247220224, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
 EOF
+     echo "Writing partitions before mkfs"
+     sfdisk /dev/sda < /tmp/mindisk.sfdisk
+     echo "Creating file system"
+     mkfs.xfs /dev/sda5
      ;;
 
 esac
