@@ -688,6 +688,7 @@ echo "First Partition Number"
 echo $firstpart
 case $firstpart in
      1)
+     echo "First partition is Number 1"
      export cntpartsbefore=`wc -l /tmp/partitions.before | awk '{ print $1 }'`
      echo "Partitions Before Install"
      echo $cntpartsbefore
@@ -703,33 +704,53 @@ case $firstpart in
      cat /tmp/partitions.extra >> /tmp/mindisk.sfdisk
      echo "Blank Partition Table"
      cat /tmp/mindisk.sfdisk
+     echo "Writing mindisk before install"
+     sfdisk /dev/sda < /tmp/mindisk.sfdisk
+     partprobe
      ;;
      5)
+     echo "First Partition is Number 5"
      cp /tmp/disk-before.sfdisk /tmp/mindisk.sfdisk
+     echo "Writing mindisk before install"
+     sfdisk /dev/sda < /tmp/mindisk.sfdisk
+     partprobe
      ;;
      '')
      echo "Disk is empty - using basic config"
+     echo "Building file"
      cat > /tmp/mindisk.sfdisk << EOF
 label: gpt
-label-id: 5DF49930-8329-4F2F-93C8-03D4AB5D1E19
 device: /dev/sda
 unit: sectors
 first-lba: 34
 
-/dev/sda5 : start=   247220224, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
+/dev/sda1 : start=        2048, size=      786432, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=90402839-0CD2-4FE0-AFCE-C53294A26976, name="efi"
+/dev/sda2 : start=      788480, size=      260096, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=82373C11-F27F-4E3C-A4A4-FBAA73453E69, name="boot"
+/dev/sda3 : start=     1048576, size=        2048, type=21686148-6449-6E6F-744E-656564454649, uuid=B8CD704C-7E11-4805-B1F4-54F2A067C1EC, name="biosboot"
+/dev/sda4 : start=     1050624, size=   246169600, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=12B8CF4D-7533-4C2B-8787-F016CE8A689B, name="root"
+/dev/sda5 : start=   247220224,  type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
 EOF
      echo "Writing partitions before mkfs"
      sfdisk /dev/sda < /tmp/mindisk.sfdisk
+     echo "Saving afterblank"
+     sfdisk -d /dev/sda > /tmp/afterblank.sfdisk
      echo "Creating file system"
+     partprobe
+     sleep 5
      mkfs.xfs /dev/sda5
+     partprobe
+     cat > /tmp/partitions.extra << EOF
+/dev/sda5 : start=   247220224, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
+EOF
      ;;
 
 esac
-echo "Writing mindisk before install"
-sfdisk /dev/sda < /tmp/mindisk.sfdisk
+echo "Wipe Complete"
 }
 
 write_extra_partitions() {
+   echo "Write Extra Paritions"
+   cat /tmp/partitions.extra
    sfdisk -d /dev/sda > /tmp/disk-after.sfdisk
    cp /tmp/disk-after.sfdisk /tmp/disk-final.sfdisk
    cat /tmp/partitions.extra >> /tmp/disk-final.sfdisk
