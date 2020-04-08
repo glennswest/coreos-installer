@@ -6,5 +6,5 @@ cd initramfs-part1
 cat ../rhcosinstall-initramfs.img |  cpio -idmv
 cd ..
 cd initramfs-part2
-/usr/lib/dracut/skipcpio ../rhcosinstall-initramfs.img | gunzip -c | cpio -idmv
+/usr/lib/dracut/skipcpio ../rhcosinstall-initramfs.img | gunzip -c | cpio -idm 
 
