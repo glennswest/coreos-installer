@@ -695,6 +695,16 @@ case $firstpart in
      tail -n +5 /tmp/partitions.before > /tmp/partitions.extra
      echo "Extra Partitions"
      cat /tmp/partitions.extra
+     export cntextra=`wc -l /tmp/partitions.extra | awk '{ print $1 }'`
+     echo "Count of extra parts"
+     echo ${cntextra}
+     if [ ${cntextra} -lt 5 ]
+        then
+        echo "Forcing datastore partion"
+        cat > /tmp/partitions.extra << EOF
+/dev/sda5 : start=   247220224, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
+EOF
+        fi
      head -4 /tmp/partitions.before > /tmp/partitions.delete
      echo "Partitions to delete"
      cat /tmp/partitions.delete
