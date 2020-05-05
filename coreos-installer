@@ -689,13 +689,13 @@ echo $firstpart
 case $firstpart in
      1)
      echo "First partition is Number 1"
-     export cntpartsbefore=`wc -l /tmp/partitions.before | awk '{ print $1 }'`
+     export cntpartsbefore=`grep -c start /tmp/partitions.before | awk '{ print $1 }'`
      echo "Partitions Before Install"
      echo $cntpartsbefore
      tail -n +5 /tmp/partitions.before > /tmp/partitions.extra
      echo "Extra Partitions"
      cat /tmp/partitions.extra
-     export cntextra=`wc -l /tmp/partitions.extra | awk '{ print $1 }'`
+     export cntextra=`grep -c start /tmp/partitions.extra | awk '{ print $1 }'`
      echo "Count of extra parts"
      echo ${cntextra}
      if [ ${cntextra} -lt 5 ]
