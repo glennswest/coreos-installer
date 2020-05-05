@@ -1,5 +1,6 @@
 # must yum install bc
 umount /mnt/dl
+cp /root/coreos-installer/images/rhcos-4.3.0-x86_64-metal.raw.gz.save /root/coreos-installer/images/rhcos-4.3.0-x86_64-metal.raw.gz
 sfdisk  /dev/sda < tools/disk4p.sfdisk
 rm /tmp/curl-rc
 rm /tmp/image_info
