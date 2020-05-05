@@ -698,7 +698,7 @@ case $firstpart in
      export cntextra=`grep -c start /tmp/partitions.extra | awk '{ print $1 }'`
      echo "Count of extra parts"
      echo ${cntextra}
-     if [ ${cntextra} -lt 5 ]
+     if [ ${cntextra} -lt 1 ]
         then
         echo "Forcing datastore partion"
         cat > /tmp/partitions.extra << EOF
