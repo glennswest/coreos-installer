@@ -704,6 +704,19 @@ case $firstpart in
         cat > /tmp/partitions.extra << EOF
 /dev/sda5 : start=   247220224, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
 EOF
+        cat > /tmp/diskp5.sfdisk << EOF
+label: gpt
+device: /dev/sda
+unit: sectors
+first-lba: 34
+
+/dev/sda5 : start=   247220224,  type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
+EOF
+        echo "Writing partition 5 before mkfs"
+        sfdisk /dev/sda < /tmp/diskp5.sfdisk
+        sleep 5
+        echo "Formating new datastore"
+        mkfs.xfs /dev/sda5
         fi
      sleep 10
      head -4 /tmp/partitions.before > /tmp/partitions.delete
