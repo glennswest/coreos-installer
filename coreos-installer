@@ -716,14 +716,12 @@ EOF
      cat /tmp/mindisk.sfdisk
      echo "Writing mindisk before install"
      sfdisk /dev/sda < /tmp/mindisk.sfdisk
-     partprobe
      ;;
      5)
      echo "First Partition is Number 5"
      cp /tmp/disk-before.sfdisk /tmp/mindisk.sfdisk
      echo "Writing mindisk before install"
      sfdisk /dev/sda < /tmp/mindisk.sfdisk
-     partprobe
      ;;
      '')
      echo "Disk is empty - using basic config"
@@ -745,10 +743,8 @@ EOF
      echo "Saving afterblank"
      sfdisk -d /dev/sda > /tmp/afterblank.sfdisk
      echo "Creating file system"
-     partprobe
      sleep 5
      mkfs.xfs /dev/sda5
-     partprobe
      cat > /tmp/partitions.extra << EOF
 /dev/sda5 : start=   247220224, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=DED9849F-E33B-4F7F-8280-47E296F76698, name="datastore"
 EOF
