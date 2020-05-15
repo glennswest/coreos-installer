@@ -464,7 +464,7 @@ get_img_url() {
         RETCODE=$?
         if [ $RETCODE -ne 0 ]
         then
-            if [[ $RETCODE -eq 22 && $retry -lt 100 ]]
+            if [[ $RETCODE -eq 22 && $retry -lt 200 ]]
             then
                 # Network isn't up yet, sleep for a sec and retry
                 sleep 1
@@ -554,7 +554,7 @@ get_ignition_url() {
     while true; do
         curl -Lf $IGNITION_URL >/tmp/ignition.ign 2>/dev/null
         RETCODE=$?
-        if [[ $RETCODE -ne 0 && $retry -lt 100 ]]
+        if [[ $RETCODE -ne 0 && $retry -lt 200 ]]
         then
             log "fetching ignition config from ${IGNITION_URL}: ${RETCODE}"
             rm -f /tmp/ignition_url
