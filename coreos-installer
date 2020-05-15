@@ -562,7 +562,7 @@ get_ignition_url() {
             let retry=$retry+1
             continue
         else
-            if [ $retry -ge 5 ]
+            if [ $retry -ge 200 ]
             then
                 log "failed to fetch ignition config from ${IGNITION_URL}"
                 exit 1
