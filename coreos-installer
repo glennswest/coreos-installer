@@ -765,19 +765,6 @@ EOF
      ;;
 
 esac
-echo "Processing xdata"
-export kernelcmdline=`cat /proc/cmdline`
-if [[ $kernelcmdline == *"xdata="* ]];
-then
-      export XDATAURL=`cat /proc/cmdline | sed -e 's/^.*xdata=//' -e 's/ .*$//'`
-      echo ${XDATAURL}
-      mkdir -p /var/mnt/datastore
-      mount /dev/sda5 /var/mnt/datastore
-      curl ${XDATAURL} -o /var/mnt/datastore/"${XDATAURL##*/}"
-      umount /var/mnt/datastore
-else
-      echo "No XDATAURL provided"
-fi
 echo "Wipe Complete"
 }
 
@@ -1001,6 +988,24 @@ This tool installs CoreOS style disk images on a block device.
     fi
 }
 
+write_xdata_file() {
+# /dev/sda1 on /boot 
+   echo "Processing xdata"
+   export kernelcmdline=`cat /proc/cmdline`
+   if [[ $kernelcmdline == *"xdata="* ]];
+   then
+      export XDATAURL=`cat /proc/cmdline | sed -e 's/^.*xdata=//' -e 's/ .*$//'`
+      echo ${XDATAURL}
+      mkdir -p /var/mnt/boot
+      mount /dev/sda1 /var/mnt/boot
+      curl ${XDATAURL} -o /var/mnt/boot/"${XDATAURL##*/}"
+      umount /var/mnt/boot
+   else
+      echo "No XDATAURL provided"
+   fi
+}
+
+
 # Main function for running the installer
 main() {
 
@@ -1045,6 +1050,7 @@ main() {
 
     # Save any extra partitions
     write_extra_partitions
+    write_xdata_file
 
     log "Install complete"
 }
