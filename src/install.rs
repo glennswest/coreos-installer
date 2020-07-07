@@ -129,12 +129,13 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         // log the error so the details aren't dropped if we encounter
         // another error during cleanup
         eprint!("{}", ChainedError::display_chain(&err));
-
+ 
+        // Default is now to preserve on error - So flag is changed to allow a forced clear
         // clean up
-        if config.preserve_on_error {
-            eprintln!("Preserving partition table as requested");
-        } else {
+        if config.clear_on_error {
             clear_partition_table(&mut dest, &mut *table)?;
+        } else {
+            eprintln!("Preserving partition table as requested");
         }
 
         // return a generic error so our exit status is right
