@@ -36,6 +36,16 @@ pub struct Disk {
     pub path: String,
 }
 
+pub struct GptPart {
+        pub idx: u32,
+        pub partition_type: [u8; 16],
+        pub guid: [u8; 16],
+        pub start_lba: u64,
+        pub end_lba: u64,
+        pub attributes: u64,
+        pub name: String,
+        }
+
 impl Disk {
     pub fn new(path: &str) -> Self {
         Disk {
@@ -174,7 +184,38 @@ impl Disk {
     fn is_dm_device(&self) -> bool {
         self.path.starts_with("/dev/mapper/") || self.path.starts_with("/dev/dm-")
     }
+
+
+   pub fn get_extra_gptpartitions(disk:&str) -> Vec<GptPart> {
+      let mut f = std::fs::File::open(disk.to_string())
+          .expect("Cannot open disk");
+      let gpt = gptman::GPT::find_from(&mut f)
+          .expect("GPT Partitions not found");
+      let mut result: Vec<GptPart> = Vec::new();
+      let mut uidx = 0;
+      for (_i, p) in gpt.iter() {
+          if p.is_used() {
+            if uidx > 3 {
+              result.push(GptPart {
+                   idx: uidx,
+                   partition_type: p.partition_type_guid,
+                   guid: p.unique_parition_guid,
+                   start_lba: p.starting_lba,
+                   end_lba:   p.ending_lba,
+                   attributes: p.attribute_bits,
+                   name:       p.partition_name.to_string(),
+                   } );
+              }
+           uidx = uidx + 1;
+           }
+        }
+   return result;
+   }
+
 }
+
+
+
 
 /// A handle to the set of device nodes for individual partitions of a
 /// device.  Must be held as long as the device nodes are needed; they might

@@ -115,6 +115,15 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     ensure_exclusive_access(&config.device)
         .chain_err(|| format!("checking for exclusive access to {}", &config.device))?;
 
+
+    let extrapart = Disk::get_extra_gptpartitions(&config.device);
+    println!("Extra Partitions = {}\n",extrapart.len());
+    if extrapart.len() > 0 {
+       for p in extrapart.iter() {
+          println!("Idx: {} Name: {}\n",p.idx, p.name);
+          }
+       }
+
     // get reference to partition table
     // For kpartx partitioning, this will conditionally call kpartx -d
     // when dropped
