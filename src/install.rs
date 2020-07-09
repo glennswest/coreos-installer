@@ -145,12 +145,16 @@ pub fn install(config: &InstallConfig) -> Result<()> {
             clear_partition_table(&mut dest, &mut *table)?;
         } else {
             eprintln!("Preserving partition table as requested");
+            Disk::add_extra_gptpartitions(&config.device,extrapart)
+                  .expect("Failed to add back additional partitions");
         }
 
         // return a generic error so our exit status is right
         bail!("install failed");
     }
 
+    Disk::add_extra_gptpartitions(&config.device,extrapart)
+               .expect("Failed to add back additional partitions");
     eprintln!("Install complete.");
     Ok(())
 }

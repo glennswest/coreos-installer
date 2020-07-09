@@ -28,6 +28,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
+use std::fs;
 
 use crate::errors::*;
 
@@ -197,7 +198,7 @@ impl Disk {
           if p.is_used() {
             if uidx > 3 {
               result.push(GptPart {
-                   idx: uidx,
+                   idx: uidx+1,
                    partition_type: p.partition_type_guid,
                    guid: p.unique_parition_guid,
                    start_lba: p.starting_lba,
@@ -212,6 +213,32 @@ impl Disk {
    return result;
    }
 
+  pub fn add_extra_gptpartitions(disk:&str,extra_parts:Vec<GptPart>) -> Result<()>  {
+    let mut f = std::fs::File::open(disk.to_string())
+      .expect("Cannot open disk");
+    let mut gpt = gptman::GPT::find_from(&mut f)
+      .expect("GPT Partitions not found");
+    for p in extra_parts.iter() {
+        println!("Adding {} into slot {}\n",p.name,p.idx);
+        println!("Start: {}\n",p.start_lba);
+        println!("End:   {}\n",p.end_lba);
+        gpt[p.idx] = gptman::GPTPartitionEntry {
+                    starting_lba:  p.start_lba,
+                    ending_lba:    p.end_lba,
+                    attribute_bits: p.attributes,
+                    partition_name: p.name[..].into(),
+                    partition_type_guid: p.partition_type,
+                    unique_parition_guid: p.guid,
+                    };
+        }
+    drop(f);
+    let mut f = fs::OpenOptions::new().write(true).open(disk.to_string())
+                .expect("Cannot open device for write");
+    gpt.write_into(&mut f)
+        .expect("Cannot write data into gpt");
+   drop (f);
+   return Ok(());
+   }
 }
 
 
