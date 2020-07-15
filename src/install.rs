@@ -153,6 +153,9 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         bail!("install failed");
     }
 
+    // Make sure end_lba and partition table is consistent 
+    Disk::update_gpt_headers(&config.device);
+
     Disk::add_extra_gptpartitions(&config.device,extrapart)
                .expect("Failed to add back additional partitions");
     eprintln!("Install complete.");

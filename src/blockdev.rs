@@ -218,6 +218,29 @@ impl Disk {
       .expect("Cannot open disk");
     let mut gpt = gptman::GPT::find_from(&mut f)
       .expect("GPT Partitions not found");
+    let max_size : u64 =  gpt.get_maximum_partition_size().unwrap_or(0);
+    if extra_parts.len() == 0 { 
+       println!("Remaining Disk {}\n",max_size);
+       println!("Last Usable Sector: {}\n",gpt.header.last_usable_lba);
+       let gb300: u64 = 585937500; /* 300 Gigabytes in 512 sectors */
+       if max_size > gb300 {
+          let size = max_size - gb300;
+          println!("Disk Size {}\n",size);
+          let starting_lba = gpt.find_optimal_place(size)
+             .expect("could not find a place to put the partition");
+          let ending_lba = starting_lba + size - 5;
+          gpt[5] = gptman::GPTPartitionEntry {
+                           partition_type_guid: [0xff; 16],
+                           unique_parition_guid: [0xff; 16],
+                           starting_lba:  starting_lba,
+                           ending_lba:   ending_lba,
+                           attribute_bits: 0,
+                           partition_name: "datastore".into(),
+                           };
+          }
+        }
+
+
     for p in extra_parts.iter() {
         println!("Adding {} into slot {}\n",p.name,p.idx);
         println!("Start: {}\n",p.start_lba);
@@ -239,6 +262,20 @@ impl Disk {
    drop (f);
    return Ok(());
    }
+
+  pub fn update_gpt_headers(disk:&str) {
+
+    let mut f = fs::OpenOptions::new().write(true).read(true).open(disk.to_string())
+                .expect("Cannot open device for write");
+    let mut gpt = gptman::GPT::find_from(&mut f)
+      .expect("GPT Partitions not found");
+    gpt.header.update_from(&mut f,gpt.sector_size)
+          .expect("Update of Disk Headers Failed");
+    gpt.write_into(&mut f)
+        .expect("Cannot write data into gpt");
+    drop (f) ;
+    }
+
 }
 
 
