@@ -188,11 +188,14 @@ impl Disk {
 
 
    pub fn get_extra_gptpartitions(disk:&str) -> Vec<GptPart> {
+      let mut result: Vec<GptPart> = Vec::new();
       let mut f = std::fs::File::open(disk.to_string())
           .expect("Cannot open disk");
-      let gpt = gptman::GPT::find_from(&mut f)
-          .expect("GPT Partitions not found");
-      let mut result: Vec<GptPart> = Vec::new();
+      let gpt = gptman::GPT::find_from(&mut f);
+      let gpt = match gpt {
+          Ok(gpt) => gpt,
+          Err(_error) => return result,
+          };
       let mut uidx = 0;
       for (_i, p) in gpt.iter() {
           if p.is_used() {
@@ -222,9 +225,10 @@ impl Disk {
     if extra_parts.len() == 0 { 
        println!("Remaining Disk {}\n",max_size);
        println!("Last Usable Sector: {}\n",gpt.header.last_usable_lba);
-       let gb300: u64 = 585937500; /* 300 Gigabytes in 512 sectors */
-       if max_size > gb300 {
-          let size = max_size - gb300;
+       let gb: u64 = 2097152;      // 1 GB Sectors 
+       let reserved_size: u64 = gb * 300;
+       if max_size > reserved_size {
+          let size = max_size - reserved_size;
           println!("Disk Size {}\n",size);
           let starting_lba = gpt.find_optimal_place(size)
              .expect("could not find a place to put the partition");
