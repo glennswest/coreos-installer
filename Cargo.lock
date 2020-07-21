@@ -470,9 +470,9 @@ dependencies = [
 
 [[package]]
 name = "gptman"
-version = "0.6.3"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9938547ba5ebacce53add00e27014bd2e2689dace40636150ec8051a96f769bc"
+checksum = "a0a28da0c56b559fbe74ecd953f86fe778ca5ecc9f2a50eee94b86cdf46f9314"
 dependencies = [
  "ansi_term 0.12.1",
  "bincode",
@@ -1545,9 +1545,9 @@ checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 
 [[package]]
 name = "unicode-width"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caaa9d531767d1ff2150b9332433f32a24622147e5ebb1f26409d5da67afd479"
+checksum = "9337591893a19b88d8d87f2cec1e73fad5cdfd10e5a6f349f498ad6ea2ffb1e3"
 
 [[package]]
 name = "unicode-xid"
