@@ -226,13 +226,10 @@ impl Disk {
        let gb: u64 = 1073741824; // 1 GB
        //let gb: u64 = 1000000000; // 1 GB
        let max_size_bytes: u64 =  max_size * gpt.sector_size;
-       println!("Remaining Disk {}\n",max_size_bytes);
-       println!("Last Usable Sector: {}\n",gpt.header.last_usable_lba);
        let reserved_size: u64 = gb * 2;
        if max_size_bytes > reserved_size {
           let size_bytes = max_size_bytes - reserved_size;
           let size = size_bytes / gpt.sector_size;
-          println!("New Partition Size {}\n",size);
           let starting_lba = gpt.find_last_place(size)
              .expect("could not find a place to put the partition");
           let ending_lba = gpt.header.last_usable_lba - 5;
@@ -250,8 +247,6 @@ impl Disk {
 
     for p in extra_parts.iter() {
         println!("Adding {} into slot {}\n",p.name,p.idx);
-        println!("Start: {}\n",p.start_lba);
-        println!("End:   {}\n",p.end_lba);
         gpt[p.idx] = gptman::GPTPartitionEntry {
                     starting_lba:  p.start_lba,
                     ending_lba:    p.end_lba,
