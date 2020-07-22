@@ -8,4 +8,5 @@ echo "Destination Device: "${install_dev}
 echo "Ignition:           "${ignurl}
 /usr/libexec/new-coreos-installer install /dev/${install_dev}  --insecure --image-url ${img} --ignition-url ${ignurl} --insecure-ignition | cat > /dev/console
 echo "Installed Exited"
+reboot --force
 

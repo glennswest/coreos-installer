@@ -223,16 +223,19 @@ impl Disk {
       .expect("GPT Partitions not found");
     let max_size : u64 =  gpt.get_maximum_partition_size().unwrap_or(0);
     if extra_parts.len() == 0 { 
-       println!("Remaining Disk {}\n",max_size);
+       let gb: u64 = 1073741824; // 1 GB
+       //let gb: u64 = 1000000000; // 1 GB
+       let max_size_bytes: u64 =  max_size * gpt.sector_size;
+       println!("Remaining Disk {}\n",max_size_bytes);
        println!("Last Usable Sector: {}\n",gpt.header.last_usable_lba);
-       let gb: u64 = 2097152;      // 1 GB Sectors 
-       let reserved_size: u64 = gb * 300;
-       if max_size > reserved_size {
-          let size = max_size - reserved_size;
-          println!("Disk Size {}\n",size);
-          let starting_lba = gpt.find_optimal_place(size)
+       let reserved_size: u64 = gb * 2;
+       if max_size_bytes > reserved_size {
+          let size_bytes = max_size_bytes - reserved_size;
+          let size = size_bytes / gpt.sector_size;
+          println!("New Partition Size {}\n",size);
+          let starting_lba = gpt.find_last_place(size)
              .expect("could not find a place to put the partition");
-          let ending_lba = starting_lba + size - 5;
+          let ending_lba = gpt.header.last_usable_lba - 5;
           gpt[5] = gptman::GPTPartitionEntry {
                            partition_type_guid: [0xff; 16],
                            unique_parition_guid: [0xff; 16],
