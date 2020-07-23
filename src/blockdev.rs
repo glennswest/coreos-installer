@@ -29,7 +29,7 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 use std::fs;
-
+use uuid::Uuid;
 use crate::errors::*;
 use crate::io::resolve_link;
 
@@ -234,9 +234,10 @@ impl Disk {
           let starting_lba = gpt.find_last_place(size)
              .expect("could not find a place to put the partition");
           let ending_lba = gpt.header.last_usable_lba - 5;
+          let unique_guid = Uuid::new_v4();
           gpt[5] = gptman::GPTPartitionEntry {
                            partition_type_guid: [0xff; 16],
-                           unique_parition_guid: [0xff; 16],
+                           unique_parition_guid: *unique_guid.as_bytes(),
                            starting_lba:  starting_lba,
                            ending_lba:   ending_lba,
                            attribute_bits: 0,

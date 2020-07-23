@@ -57,6 +57,7 @@ url = "^2.1"
 walkdir = "^2.3"
 xz2 = "^0.1"
 gptman = "0.6.3"
+uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 maplit = "^1.0"
