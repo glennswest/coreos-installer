@@ -38,6 +38,8 @@ pub struct Disk {
     pub path: String,
 }
 
+static LINUX_PARTITION_TYPE: [u8; 16] = [0x0F,0xC6,0x3D,0xAF,0x84,0x83,0x47,0x72,0x8E,0x79,0x3D,0x69,0xD8,0x47,0x7D,0xE4];
+
 pub struct GptPart {
         pub idx: u32,
         pub partition_type: [u8; 16],
@@ -236,7 +238,7 @@ impl Disk {
           let ending_lba = gpt.header.last_usable_lba - 5;
           let unique_guid = Uuid::new_v4();
           gpt[5] = gptman::GPTPartitionEntry {
-                           partition_type_guid: [0xff; 16],
+                           partition_type_guid: LINUX_PARTITION_TYPE,
                            unique_parition_guid: *unique_guid.as_bytes(),
                            starting_lba:  starting_lba,
                            ending_lba:   ending_lba,
