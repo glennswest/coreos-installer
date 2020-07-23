@@ -48,6 +48,8 @@ pub struct InstallConfig {
     pub insecure: bool,
     pub clear_on_error: bool,
     pub network_config: Option<String>,
+    pub wipedisk: bool,
+    pub dsneeded: bool,
 }
 
 pub struct DownloadConfig {
@@ -679,6 +681,8 @@ fn parse_install(matches: &ArgMatches) -> Result<Config> {
         insecure: matches.is_present("insecure"),
         clear_on_error: matches.is_present("clear-on-error"),
         network_config,
+        wipedisk: matches.is_present("wipedisk"),
+        dsneeded: matches.is_present("dsneeded"),
     }))
 }
 

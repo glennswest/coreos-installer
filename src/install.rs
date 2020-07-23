@@ -125,7 +125,8 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         .chain_err(|| format!("checking for exclusive access to {}", &config.device))?;
 
 
-    let extrapart = Disk::get_extra_gptpartitions(&config.device);
+
+    let mut extrapart = Disk::get_extra_gptpartitions(&config.device);
     println!("Extra Partitions = {}\n",extrapart.len());
 
     // get reference to partition table
@@ -134,6 +135,12 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     let mut table = Disk::new(&config.device)
         .get_partition_table()
         .chain_err(|| format!("getting partition table for {}", &config.device))?;
+
+    if config.wipedisk {
+       println!("Erasing partition table\n");
+       clear_partition_table(&mut dest, &mut *table)?;
+       extrapart.truncate(0);
+       }
 
     // copy and postprocess disk image
     // On failure, clear and reread the partition table to prevent the disk
@@ -149,7 +156,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
             clear_partition_table(&mut dest, &mut *table)?;
         } else {
             eprintln!("Preserving partition table as requested");
-            Disk::add_extra_gptpartitions(&config.device,extrapart)
+            Disk::add_extra_gptpartitions(&config.device,extrapart,config.dsneeded)
                   .expect("Failed to add back additional partitions");
         }
 
@@ -160,7 +167,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     // Make sure end_lba and partition table is consistent 
     Disk::update_gpt_headers(&config.device);
 
-    Disk::add_extra_gptpartitions(&config.device,extrapart)
+    Disk::add_extra_gptpartitions(&config.device,extrapart,config.dsneeded)
                .expect("Failed to add back additional partitions");
     eprintln!("Install complete.");
     Ok(())

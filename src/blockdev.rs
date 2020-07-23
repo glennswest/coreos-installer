@@ -217,13 +217,13 @@ impl Disk {
    return result;
    }
 
-  pub fn add_extra_gptpartitions(disk:&str,extra_parts:Vec<GptPart>) -> Result<()>  {
+  pub fn add_extra_gptpartitions(disk:&str,extra_parts:Vec<GptPart>,dsneeded:bool) -> Result<()>  {
     let mut f = std::fs::File::open(disk.to_string())
       .expect("Cannot open disk");
     let mut gpt = gptman::GPT::find_from(&mut f)
       .expect("GPT Partitions not found");
     let max_size : u64 =  gpt.get_maximum_partition_size().unwrap_or(0);
-    if extra_parts.len() == 0 { 
+    if extra_parts.len() == 0 && dsneeded { 
        let gb: u64 = 1073741824; // 1 GB
        //let gb: u64 = 1000000000; // 1 GB
        let max_size_bytes: u64 =  max_size * gpt.sector_size;
