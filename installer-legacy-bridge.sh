@@ -6,7 +6,7 @@ echo "Kernel Command Line: "${kcmdline}
 echo "Image:              "${img}
 echo "Destination Device: "${install_dev}
 echo "Ignition:           "${ignurl}
-/usr/libexec/new-coreos-installer install /dev/${install_dev}  --insecure --image-url ${img} --ignition-url ${ignurl} --insecure-ignition | cat > /dev/console
+/usr/libexec/new-coreos-installer install /dev/${install_dev}  --insecure --image-url ${img} --ignition-url ${ignurl} --insecure-ignition --dsneeded | cat > /dev/console
 echo "Installed Exited"
 reboot --force
 

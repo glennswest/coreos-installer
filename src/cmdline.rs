@@ -268,6 +268,16 @@ pub fn parse_args() -> Result<Config> {
                         .long("clear-on-error")
                         .help("Clear partition table on error"),
                 )
+                .arg(
+                    Arg::with_name("dsneeded")
+                        .long("dsneeded")
+                        .help("During install, create datastore if not present"),
+                )
+                .arg(
+                    Arg::with_name("wipedisk")
+                        .long("wipedisk")
+                        .help("Always delete all partitions before install"),
+                )
                 // positional args
                 .arg(
                     Arg::with_name("device")
