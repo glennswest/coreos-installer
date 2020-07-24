@@ -38,7 +38,7 @@ pub struct Disk {
     pub path: String,
 }
 
-static LINUX_PARTITION_TYPE: [u8; 16] = [0x0F,0xC6,0x3D,0xAF,0x84,0x83,0x47,0x72,0x8E,0x79,0x3D,0x69,0xD8,0x47,0x7D,0xE4];
+static LINUX_PARTITION_TYPE: [u8; 16] = [0xAF,0x3D,0xC6,0x0F, 0x83,0x84,0x72,0x47, 0x8E,0x79,0x3D,0x69, 0xD8,0x47,0x7D,0xE4];
 
 pub struct GptPart {
         pub idx: u32,
@@ -225,6 +225,7 @@ impl Disk {
     let mut gpt = gptman::GPT::find_from(&mut f)
       .expect("GPT Partitions not found");
     let max_size : u64 =  gpt.get_maximum_partition_size().unwrap_or(0);
+    let mut format_needed: bool = false;
     if extra_parts.len() == 0 && dsneeded { 
        let gb: u64 = 1073741824; // 1 GB
        //let gb: u64 = 1000000000; // 1 GB
@@ -245,6 +246,7 @@ impl Disk {
                            attribute_bits: 0,
                            partition_name: "datastore".into(),
                            };
+          format_needed = true;
           }
         }
 
@@ -266,6 +268,10 @@ impl Disk {
     gpt.write_into(&mut f)
         .expect("Cannot write data into gpt");
    drop (f);
+   if format_needed {
+      // Handle when we add a datastore dynamically
+      Disk::run_mkfs(disk,"5")?;
+      }
    return Ok(());
    }
 
@@ -282,6 +288,19 @@ impl Disk {
     drop (f) ;
     }
 
+   pub fn run_mkfs(disk:&str, part:&str) -> Result<()> {
+        let devname = &(disk.to_string() + &part.to_string());
+        let result = Command::new("mkfs.ext4")
+            .arg(devname)
+            .output()
+            .chain_err(|| format!("running mkfs {}", devname))?;
+        if !result.status.success() {
+            // copy out its stderr
+            eprint!("{}", String::from_utf8_lossy(&*result.stderr));
+            bail!("mkfs {} {} failed: {}", disk, devname, result.status);
+        }
+        Ok(())
+    }
 }
 
 
