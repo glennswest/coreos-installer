@@ -90,6 +90,16 @@ copy_arg coreos.inst.image_url       --image-url
 copy_arg coreos.inst.platform_id     --platform
 copy_arg coreos.inst.stream          --stream
 
+# datastore needed boolean
+if karg_bool coreos.inst.dsneeded; then
+    args+=("--dsneeded")
+fi
+
+# Wipedisk boolean
+if karg_bool coreos.inst.wipedisk; then
+    args+=("--wipedisk")
+fi
+
 # Insecure boolean
 if karg_bool coreos.inst.insecure; then
     args+=("--insecure")
