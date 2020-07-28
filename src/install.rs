@@ -98,8 +98,9 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         if config.clear_on_error {
             clear_partition_table(&mut dest, &mut *table)?;
         } else {
+            clear_partition_table(&mut dest, &mut *table)?;
             eprintln!("Preserving partition table as requested");
-            Disk::add_extra_gptpartitions(&config.device,extrapart,config.dsneeded)
+            Disk::add_extra_gptpartitions(&config.device, extrapart)
                   .expect("Failed to add back additional partitions");
         }
 
@@ -110,7 +111,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     // Make sure end_lba and partition table is consistent 
     Disk::update_gpt_headers(&config.device);
 
-    Disk::add_extra_gptpartitions(&config.device,extrapart,config.dsneeded)
+    Disk::add_extra_gptpartitions(&config.device,extrapart)
                .expect("Failed to add back additional partitions");
     eprintln!("Install complete.");
     Ok(())

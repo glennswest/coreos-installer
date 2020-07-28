@@ -49,7 +49,6 @@ pub struct InstallConfig {
     pub clear_on_error: bool,
     pub network_config: Option<String>,
     pub wipedisk: bool,
-    pub dsneeded: bool,
 }
 
 pub struct DownloadConfig {
@@ -267,11 +266,6 @@ pub fn parse_args() -> Result<Config> {
                     Arg::with_name("clear-on-error")
                         .long("clear-on-error")
                         .help("Clear partition table on error"),
-                )
-                .arg(
-                    Arg::with_name("dsneeded")
-                        .long("dsneeded")
-                        .help("During install, create datastore if not present"),
                 )
                 .arg(
                     Arg::with_name("wipedisk")
@@ -692,7 +686,6 @@ fn parse_install(matches: &ArgMatches) -> Result<Config> {
         clear_on_error: matches.is_present("clear-on-error"),
         network_config,
         wipedisk: matches.is_present("wipedisk"),
-        dsneeded: matches.is_present("dsneeded"),
     }))
 }
 

@@ -29,7 +29,6 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 use std::fs;
-use uuid::Uuid;
 use crate::errors::*;
 use crate::io::resolve_link;
 
@@ -38,7 +37,6 @@ pub struct Disk {
     pub path: String,
 }
 
-static LINUX_PARTITION_TYPE: [u8; 16] = [0xAF,0x3D,0xC6,0x0F, 0x83,0x84,0x72,0x47, 0x8E,0x79,0x3D,0x69, 0xD8,0x47,0x7D,0xE4];
 
 pub struct GptPart {
         pub idx: u32,
@@ -203,7 +201,7 @@ impl Disk {
     }
 
 
-   pub fn get_extra_gptpartitions(disk:&str) -> Vec<GptPart> {
+   pub fn get_extra_gptpartitions(disk: &str) -> Vec<GptPart> {
       let mut result: Vec<GptPart> = Vec::new();
       let mut f = std::fs::File::open(disk.to_string())
           .expect("Cannot open disk");
@@ -232,37 +230,11 @@ impl Disk {
    return result;
    }
 
-  pub fn add_extra_gptpartitions(disk:&str,extra_parts:Vec<GptPart>,dsneeded:bool) -> Result<()>  {
+  pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()>  {
     let mut f = std::fs::File::open(disk.to_string())
       .expect("Cannot open disk");
     let mut gpt = gptman::GPT::find_from(&mut f)
       .expect("GPT Partitions not found");
-    let max_size : u64 =  gpt.get_maximum_partition_size().unwrap_or(0);
-    let mut format_needed: bool = false;
-    if extra_parts.len() == 0 && dsneeded { 
-       let gb: u64 = 1073741824; // 1 GB
-       //let gb: u64 = 1000000000; // 1 GB
-       let max_size_bytes: u64 =  max_size * gpt.sector_size;
-       let reserved_size: u64 = gb * 2;
-       if max_size_bytes > reserved_size {
-          let size_bytes = max_size_bytes - reserved_size;
-          let size = size_bytes / gpt.sector_size;
-          let starting_lba = gpt.find_last_place(size)
-             .expect("could not find a place to put the partition");
-          let ending_lba = gpt.header.last_usable_lba - 5;
-          let unique_guid = Uuid::new_v4();
-          gpt[5] = gptman::GPTPartitionEntry {
-                           partition_type_guid: LINUX_PARTITION_TYPE,
-                           unique_parition_guid: *unique_guid.as_bytes(),
-                           starting_lba:  starting_lba,
-                           ending_lba:   ending_lba,
-                           attribute_bits: 0,
-                           partition_name: "datastore".into(),
-                           };
-          format_needed = true;
-          }
-        }
-
 
     for p in extra_parts.iter() {
         println!("Adding {} into slot {}\n",p.name,p.idx);
@@ -281,10 +253,6 @@ impl Disk {
     gpt.write_into(&mut f)
         .expect("Cannot write data into gpt");
    drop (f);
-   if format_needed {
-      // Handle when we add a datastore dynamically
-      Disk::run_mkfs(disk,"5")?;
-      }
    return Ok(());
    }
 
@@ -301,23 +269,7 @@ impl Disk {
     drop (f) ;
     }
 
-   pub fn run_mkfs(disk:&str, part:&str) -> Result<()> {
-        let devname = &(disk.to_string() + &part.to_string());
-        let result = Command::new("mkfs.ext4")
-            .arg(devname)
-            .output()
-            .chain_err(|| format!("running mkfs {}", devname))?;
-        if !result.status.success() {
-            // copy out its stderr
-            eprint!("{}", String::from_utf8_lossy(&*result.stderr));
-            bail!("mkfs {} {} failed: {}", disk, devname, result.status);
-        }
-        Ok(())
-    }
 }
-
-
-
 
 /// A handle to the set of device nodes for individual partitions of a
 /// device.  Must be held as long as the device nodes are needed; they might
