@@ -24,7 +24,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fs::{File, OpenOptions};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::{copy, Seek, SeekFrom, Write};
 use std::os::unix::fs::FileTypeExt;
 use std::path::{Path, PathBuf};
 
@@ -622,83 +622,5 @@ mod tests {
                 length: 10
             }
         );
-    }
-
-    #[test]
-    fn test_copy_n() {
-        let mut sink = std::io::sink();
-        let mut buf = [0u8; 50];
-
-        let data = [0u8; 30];
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
-            0
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
-            1
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 29, &mut buf).unwrap(),
-            29
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 30, &mut buf).unwrap(),
-            30
-        );
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 31, &mut buf).unwrap(), 30);
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(), 30);
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(), 30);
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(), 30);
-
-        let data = [0u8; 50];
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
-            0
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
-            1
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(),
-            49
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(),
-            50
-        );
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(), 50);
-
-        let data = [0u8; 80];
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
-            0
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
-            1
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(),
-            49
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(),
-            50
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(),
-            51
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 79, &mut buf).unwrap(),
-            79
-        );
-        assert_eq!(
-            copy_exactly_n(&mut &data[..], &mut sink, 80, &mut buf).unwrap(),
-            80
-        );
-        assert_eq!(copy_n(&mut &data[..], &mut sink, 81, &mut buf).unwrap(), 80);
     }
 }

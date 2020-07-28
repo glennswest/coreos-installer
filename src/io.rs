@@ -20,14 +20,11 @@ use std::path::{Path, PathBuf};
 
 use crate::errors::*;
 
-/// This is like `std::io:copy()`, but uses a buffer larger than 8 KiB
-/// to amortize syscall overhead.
-pub fn copy(reader: &mut (impl Read + ?Sized), writer: &mut (impl Write + ?Sized)) -> Result<u64> {
-    // https://github.com/rust-lang/rust/issues/49921
-    // https://github.com/coreutils/coreutils/blob/6a3d2883/src/ioblksize.h
-    let mut buf = [0u8; 256 * 1024];
-    copy_n(reader, writer, std::u64::MAX, &mut buf)
-}
+// The default BufReader/BufWriter buffer size is 8 KiB, which isn't large
+// enough to fully amortize system call overhead.
+// https://github.com/rust-lang/rust/issues/49921
+// https://github.com/coreutils/coreutils/blob/6a3d2883/src/ioblksize.h
+pub const BUFFER_SIZE: usize = 256 * 1024;
 
 /// This is like `std::io:copy()`, but limits the number of bytes copied over. The `Read` trait has
 /// `take()`, but that takes ownership of the reader. We also take a buf to avoid re-initializing a
@@ -208,5 +205,83 @@ mod tests {
             let mut rd = std::io::Cursor::new(&input);
             assert!(hasher.validate(&mut rd).is_ok() == *valid);
         }
+    }
+
+    #[test]
+    fn test_copy_n() {
+        let mut sink = std::io::sink();
+        let mut buf = [0u8; 50];
+
+        let data = [0u8; 30];
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
+            0
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
+            1
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 29, &mut buf).unwrap(),
+            29
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 30, &mut buf).unwrap(),
+            30
+        );
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 31, &mut buf).unwrap(), 30);
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(), 30);
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(), 30);
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(), 30);
+
+        let data = [0u8; 50];
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
+            0
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
+            1
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(),
+            49
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(),
+            50
+        );
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(), 50);
+
+        let data = [0u8; 80];
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 0, &mut buf).unwrap(),
+            0
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 1, &mut buf).unwrap(),
+            1
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 49, &mut buf).unwrap(),
+            49
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 50, &mut buf).unwrap(),
+            50
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 51, &mut buf).unwrap(),
+            51
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 79, &mut buf).unwrap(),
+            79
+        );
+        assert_eq!(
+            copy_exactly_n(&mut &data[..], &mut sink, 80, &mut buf).unwrap(),
+            80
+        );
+        assert_eq!(copy_n(&mut &data[..], &mut sink, 81, &mut buf).unwrap(), 80);
     }
 }
