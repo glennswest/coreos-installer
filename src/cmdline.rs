@@ -276,7 +276,7 @@ pub fn parse_args() -> Result<Config> {
                 .arg(
                     Arg::with_name("wipedisk")
                         .long("wipedisk")
-                        .help("Always delete all partitions before install"),
+                        .help("Before install, permanently delete all partitions"),
                 )
                 // positional args
                 .arg(
