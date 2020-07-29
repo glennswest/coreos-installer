@@ -67,7 +67,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     ensure_exclusive_access(&config.device)
         .chain_err(|| format!("checking for exclusive access to {}", &config.device))?;
 
-    let mut extrapart = Disk::get_extra_gptpartitions(&config.device);
+    let mut extrapart = Disk::get_extra_gptpartitions(&config.device)?;
     println!("Extra Partitions = {}\n", extrapart.len());
 
     // get reference to partition table
@@ -97,7 +97,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         } else {
             clear_partition_table(&mut dest, &mut *table)?;
             Disk::add_extra_gptpartitions(&config.device, extrapart)
-                .expect("Failed to add back additional partitions");
+                .chain_err(|| "restoring additional partitions")?;
         }
 
         // return a generic error so our exit status is right
@@ -105,10 +105,10 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     }
 
     // Make sure end_lba and partition table is consistent
-    Disk::update_gpt_headers(&config.device);
+    Disk::update_gpt_headers(&config.device)?;
 
     Disk::add_extra_gptpartitions(&config.device, extrapart)
-        .expect("Failed to add back additional partitions");
+        .chain_err(|| "restoring additional partitions")?;
     eprintln!("Install complete.");
     Ok(())
 }

@@ -202,16 +202,16 @@ impl Disk {
         self.path.starts_with("/dev/mapper/") || self.path.starts_with("/dev/dm-")
     }
 
-    pub fn get_extra_gptpartitions(disk: &str) -> Vec<GptPart> {
+    pub fn get_extra_gptpartitions(disk: &str) -> Result<Vec<GptPart>> {
         let mut result: Vec<GptPart> = Vec::new();
 
         let mut f = OpenOptions::new()
             .read(true)
             .open(disk)
-            .expect("Cannot open disk");
+            .chain_err(|| format!("opening {} for reading", disk))?;
         let gpt = match GPT::find_from(&mut f) {
             Ok(gpt) => gpt,
-            Err(_) => return result,
+            Err(_) => return Ok(result),
         };
 
         let mut uidx = 0;
@@ -231,15 +231,16 @@ impl Disk {
                 uidx += 1;
             }
         }
-        result
+        Ok(result)
     }
 
     pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()> {
         let mut f = OpenOptions::new()
             .read(true)
             .open(disk)
-            .expect("Cannot open disk");
-        let mut gpt = GPT::find_from(&mut f).expect("GPT Partitions not found");
+            .chain_err(|| format!("opening {} for reading", disk))?;
+        let mut gpt =
+            GPT::find_from(&mut f).chain_err(|| format!("reading GPT partitions on {}", disk))?;
 
         for p in extra_parts.iter() {
             println!("Adding {} into slot {}", p.name, p.idx);
@@ -256,22 +257,26 @@ impl Disk {
         let mut f = OpenOptions::new()
             .write(true)
             .open(disk)
-            .expect("Cannot open device for write");
-        gpt.write_into(&mut f).expect("Cannot write data into gpt");
+            .chain_err(|| format!("opening {} for writing", disk))?;
+        gpt.write_into(&mut f)
+            .chain_err(|| format!("writing updated GPT to {}", disk))?;
         Ok(())
     }
 
-    pub fn update_gpt_headers(disk: &str) {
+    pub fn update_gpt_headers(disk: &str) -> Result<()> {
         let mut f = OpenOptions::new()
             .read(true)
             .write(true)
             .open(disk)
-            .expect("Cannot open device for write");
-        let mut gpt = GPT::find_from(&mut f).expect("GPT Partitions not found");
+            .chain_err(|| format!("opening {} for reading and writing", disk))?;
+        let mut gpt =
+            GPT::find_from(&mut f).chain_err(|| format!("reading GPT partitions on {}", disk))?;
         gpt.header
             .update_from(&mut f, gpt.sector_size)
-            .expect("Update of Disk Headers Failed");
-        gpt.write_into(&mut f).expect("Cannot write data into gpt");
+            .chain_err(|| format!("updating GPT partitions for {}", disk))?;
+        gpt.write_into(&mut f)
+            .chain_err(|| format!("writing updated GPT to {}", disk))?;
+        Ok(())
     }
 }
 
