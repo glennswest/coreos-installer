@@ -67,10 +67,8 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     ensure_exclusive_access(&config.device)
         .chain_err(|| format!("checking for exclusive access to {}", &config.device))?;
 
-
-
     let mut extrapart = Disk::get_extra_gptpartitions(&config.device);
-    println!("Extra Partitions = {}\n",extrapart.len());
+    println!("Extra Partitions = {}\n", extrapart.len());
 
     // get reference to partition table
     // For kpartx partitioning, this will conditionally call kpartx -d
@@ -80,10 +78,10 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         .chain_err(|| format!("getting partition table for {}", &config.device))?;
 
     if config.wipedisk {
-       println!("Erasing partition table\n");
-       clear_partition_table(&mut dest, &mut *table)?;
-       extrapart.truncate(0);
-       }
+        println!("Erasing partition table\n");
+        clear_partition_table(&mut dest, &mut *table)?;
+        extrapart.truncate(0);
+    }
 
     // copy and postprocess disk image
     // On failure, clear and reread the partition table to prevent the disk
@@ -92,7 +90,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         // log the error so the details aren't dropped if we encounter
         // another error during cleanup
         eprint!("{}", ChainedError::display_chain(&err));
- 
+
         // Default is now to preserve on error - So flag is changed to allow a forced clear
         // clean up
         if config.clear_on_error {
@@ -101,18 +99,18 @@ pub fn install(config: &InstallConfig) -> Result<()> {
             clear_partition_table(&mut dest, &mut *table)?;
             eprintln!("Preserving partition table as requested");
             Disk::add_extra_gptpartitions(&config.device, extrapart)
-                  .expect("Failed to add back additional partitions");
+                .expect("Failed to add back additional partitions");
         }
 
         // return a generic error so our exit status is right
         bail!("install failed");
     }
 
-    // Make sure end_lba and partition table is consistent 
+    // Make sure end_lba and partition table is consistent
     Disk::update_gpt_headers(&config.device);
 
-    Disk::add_extra_gptpartitions(&config.device,extrapart)
-               .expect("Failed to add back additional partitions");
+    Disk::add_extra_gptpartitions(&config.device, extrapart)
+        .expect("Failed to add back additional partitions");
     eprintln!("Install complete.");
     Ok(())
 }

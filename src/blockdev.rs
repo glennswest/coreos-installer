@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::errors::*;
+use crate::io::resolve_link;
 use error_chain::bail;
 use nix::sys::stat::{major, minor};
 use nix::{errno::Errno, mount};
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fs;
 use std::fs::{metadata, read_dir, read_to_string, remove_dir, File, OpenOptions};
 use std::num::{NonZeroU32, NonZeroU64};
 use std::os::linux::fs::MetadataExt;
@@ -28,25 +31,21 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
-use std::fs;
-use crate::errors::*;
-use crate::io::resolve_link;
 
 #[derive(Debug)]
 pub struct Disk {
     pub path: String,
 }
 
-
 pub struct GptPart {
-        pub idx: u32,
-        pub partition_type: [u8; 16],
-        pub guid: [u8; 16],
-        pub start_lba: u64,
-        pub end_lba: u64,
-        pub attributes: u64,
-        pub name: String,
-        }
+    pub idx: u32,
+    pub partition_type: [u8; 16],
+    pub guid: [u8; 16],
+    pub start_lba: u64,
+    pub end_lba: u64,
+    pub attributes: u64,
+    pub name: String,
+}
 
 impl Disk {
     pub fn new(path: &str) -> Self {
@@ -200,75 +199,72 @@ impl Disk {
         self.path.starts_with("/dev/mapper/") || self.path.starts_with("/dev/dm-")
     }
 
-
-   pub fn get_extra_gptpartitions(disk: &str) -> Vec<GptPart> {
-      let mut result: Vec<GptPart> = Vec::new();
-      let mut f = std::fs::File::open(disk.to_string())
-          .expect("Cannot open disk");
-      let gpt = gptman::GPT::find_from(&mut f);
-      let gpt = match gpt {
-          Ok(gpt) => gpt,
-          Err(_error) => return result,
-          };
-      let mut uidx = 0;
-      for (_i, p) in gpt.iter() {
-          if p.is_used() {
-            if uidx > 3 {
-              result.push(GptPart {
-                   idx: uidx+1,
-                   partition_type: p.partition_type_guid,
-                   guid: p.unique_parition_guid,
-                   start_lba: p.starting_lba,
-                   end_lba:   p.ending_lba,
-                   attributes: p.attribute_bits,
-                   name:       p.partition_name.to_string(),
-                   } );
-              }
-           uidx = uidx + 1;
-           }
+    pub fn get_extra_gptpartitions(disk: &str) -> Vec<GptPart> {
+        let mut result: Vec<GptPart> = Vec::new();
+        let mut f = std::fs::File::open(disk.to_string()).expect("Cannot open disk");
+        let gpt = gptman::GPT::find_from(&mut f);
+        let gpt = match gpt {
+            Ok(gpt) => gpt,
+            Err(_error) => return result,
+        };
+        let mut uidx = 0;
+        for (_i, p) in gpt.iter() {
+            if p.is_used() {
+                if uidx > 3 {
+                    result.push(GptPart {
+                        idx: uidx + 1,
+                        partition_type: p.partition_type_guid,
+                        guid: p.unique_parition_guid,
+                        start_lba: p.starting_lba,
+                        end_lba: p.ending_lba,
+                        attributes: p.attribute_bits,
+                        name: p.partition_name.to_string(),
+                    });
+                }
+                uidx = uidx + 1;
+            }
         }
-   return result;
-   }
-
-  pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()>  {
-    let mut f = std::fs::File::open(disk.to_string())
-      .expect("Cannot open disk");
-    let mut gpt = gptman::GPT::find_from(&mut f)
-      .expect("GPT Partitions not found");
-
-    for p in extra_parts.iter() {
-        println!("Adding {} into slot {}\n",p.name,p.idx);
-        gpt[p.idx] = gptman::GPTPartitionEntry {
-                    starting_lba:  p.start_lba,
-                    ending_lba:    p.end_lba,
-                    attribute_bits: p.attributes,
-                    partition_name: p.name[..].into(),
-                    partition_type_guid: p.partition_type,
-                    unique_parition_guid: p.guid,
-                    };
-        }
-    drop(f);
-    let mut f = fs::OpenOptions::new().write(true).open(disk.to_string())
-                .expect("Cannot open device for write");
-    gpt.write_into(&mut f)
-        .expect("Cannot write data into gpt");
-   drop (f);
-   return Ok(());
-   }
-
-  pub fn update_gpt_headers(disk:&str) {
-
-    let mut f = fs::OpenOptions::new().write(true).read(true).open(disk.to_string())
-                .expect("Cannot open device for write");
-    let mut gpt = gptman::GPT::find_from(&mut f)
-      .expect("GPT Partitions not found");
-    gpt.header.update_from(&mut f,gpt.sector_size)
-          .expect("Update of Disk Headers Failed");
-    gpt.write_into(&mut f)
-        .expect("Cannot write data into gpt");
-    drop (f) ;
+        return result;
     }
 
+    pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()> {
+        let mut f = std::fs::File::open(disk.to_string()).expect("Cannot open disk");
+        let mut gpt = gptman::GPT::find_from(&mut f).expect("GPT Partitions not found");
+
+        for p in extra_parts.iter() {
+            println!("Adding {} into slot {}\n", p.name, p.idx);
+            gpt[p.idx] = gptman::GPTPartitionEntry {
+                starting_lba: p.start_lba,
+                ending_lba: p.end_lba,
+                attribute_bits: p.attributes,
+                partition_name: p.name[..].into(),
+                partition_type_guid: p.partition_type,
+                unique_parition_guid: p.guid,
+            };
+        }
+        drop(f);
+        let mut f = fs::OpenOptions::new()
+            .write(true)
+            .open(disk.to_string())
+            .expect("Cannot open device for write");
+        gpt.write_into(&mut f).expect("Cannot write data into gpt");
+        drop(f);
+        return Ok(());
+    }
+
+    pub fn update_gpt_headers(disk: &str) {
+        let mut f = fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(disk.to_string())
+            .expect("Cannot open device for write");
+        let mut gpt = gptman::GPT::find_from(&mut f).expect("GPT Partitions not found");
+        gpt.header
+            .update_from(&mut f, gpt.sector_size)
+            .expect("Update of Disk Headers Failed");
+        gpt.write_into(&mut f).expect("Cannot write data into gpt");
+        drop(f);
+    }
 }
 
 /// A handle to the set of device nodes for individual partitions of a
