@@ -91,13 +91,11 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         // another error during cleanup
         eprint!("{}", ChainedError::display_chain(&err));
 
-        // Default is now to preserve on error - So flag is changed to allow a forced clear
         // clean up
-        if config.clear_on_error {
-            clear_partition_table(&mut dest, &mut *table)?;
+        if config.preserve_on_error {
+            eprintln!("Preserving partition table as requested");
         } else {
             clear_partition_table(&mut dest, &mut *table)?;
-            eprintln!("Preserving partition table as requested");
             Disk::add_extra_gptpartitions(&config.device, extrapart)
                 .expect("Failed to add back additional partitions");
         }

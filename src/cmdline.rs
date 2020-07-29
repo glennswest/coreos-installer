@@ -46,7 +46,7 @@ pub struct InstallConfig {
     pub append_kargs: Option<Vec<String>>,
     pub delete_kargs: Option<Vec<String>>,
     pub insecure: bool,
-    pub clear_on_error: bool,
+    pub preserve_on_error: bool,
     pub network_config: Option<String>,
     pub wipedisk: bool,
 }
@@ -263,9 +263,9 @@ pub fn parse_args() -> Result<Config> {
                         .takes_value(true),
                 )
                 .arg(
-                    Arg::with_name("clear-on-error")
-                        .long("clear-on-error")
-                        .help("Clear partition table on error"),
+                    Arg::with_name("preserve-on-error")
+                        .long("preserve-on-error")
+                        .help("Don't clear partition table on error"),
                 )
                 .arg(
                     Arg::with_name("wipedisk")
@@ -683,7 +683,7 @@ fn parse_install(matches: &ArgMatches) -> Result<Config> {
             .values_of("delete-karg")
             .map(|v| v.map(String::from).collect()),
         insecure: matches.is_present("insecure"),
-        clear_on_error: matches.is_present("clear-on-error"),
+        preserve_on_error: matches.is_present("preserve-on-error"),
         network_config,
         wipedisk: matches.is_present("wipedisk"),
     }))
