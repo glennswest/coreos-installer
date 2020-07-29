@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use crate::errors::*;
-use crate::io::resolve_link;
 use error_chain::bail;
 use nix::sys::stat::{major, minor};
 use nix::{errno::Errno, mount};
@@ -21,7 +20,10 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fs;
-use std::fs::{metadata, read_dir, read_to_string, remove_dir, File, OpenOptions};
+use std::fs::{
+    canonicalize, metadata, read_dir, read_to_string, remove_dir, symlink_metadata, File,
+    OpenOptions,
+};
 use std::num::{NonZeroU32, NonZeroU64};
 use std::os::linux::fs::MetadataExt;
 use std::os::raw::c_int;
@@ -465,8 +467,13 @@ impl Partition {
         // Now assume a kpartx "partition", where the path is a symlink to
         // an unpartitioned DM device node.
         // /sys/block/dm-1
-        let (target, is_link) = resolve_link(&self.path)?;
+        let is_link = symlink_metadata(&self.path)
+            .chain_err(|| format!("reading metadata for {}", self.path))?
+            .file_type()
+            .is_symlink();
         if is_link {
+            let target = canonicalize(&self.path)
+                .chain_err(|| format!("getting absolute path to {}", self.path))?;
             let devdir = basedir.join(
                 target
                     .file_name()
