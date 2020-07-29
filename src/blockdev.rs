@@ -40,6 +40,7 @@ pub struct Disk {
     pub path: String,
 }
 
+#[derive(Debug)]
 pub struct GptPart {
     pub idx: u32,
     pub partition_type: [u8; 16],
@@ -200,67 +201,6 @@ impl Disk {
 
     fn is_dm_device(&self) -> bool {
         self.path.starts_with("/dev/mapper/") || self.path.starts_with("/dev/dm-")
-    }
-
-    pub fn get_extra_gptpartitions(disk: &str) -> Result<Vec<GptPart>> {
-        let mut result: Vec<GptPart> = Vec::new();
-
-        let mut f = OpenOptions::new()
-            .read(true)
-            .open(disk)
-            .chain_err(|| format!("opening {} for reading", disk))?;
-        let gpt = match GPT::find_from(&mut f) {
-            Ok(gpt) => gpt,
-            Err(_) => return Ok(result),
-        };
-
-        let mut uidx = 0;
-        for (_, p) in gpt.iter() {
-            if p.is_used() {
-                if uidx > 3 {
-                    result.push(GptPart {
-                        idx: uidx + 1,
-                        partition_type: p.partition_type_guid,
-                        guid: p.unique_parition_guid,
-                        start_lba: p.starting_lba,
-                        end_lba: p.ending_lba,
-                        attributes: p.attribute_bits,
-                        name: p.partition_name.to_string(),
-                    });
-                }
-                uidx += 1;
-            }
-        }
-        Ok(result)
-    }
-
-    pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()> {
-        let mut f = OpenOptions::new()
-            .read(true)
-            .open(disk)
-            .chain_err(|| format!("opening {} for reading", disk))?;
-        let mut gpt =
-            GPT::find_from(&mut f).chain_err(|| format!("reading GPT partitions on {}", disk))?;
-
-        for p in extra_parts.iter() {
-            println!("Adding {} into slot {}", p.name, p.idx);
-            gpt[p.idx] = GPTPartitionEntry {
-                starting_lba: p.start_lba,
-                ending_lba: p.end_lba,
-                attribute_bits: p.attributes,
-                partition_name: p.name[..].into(),
-                partition_type_guid: p.partition_type,
-                unique_parition_guid: p.guid,
-            };
-        }
-
-        let mut f = OpenOptions::new()
-            .write(true)
-            .open(disk)
-            .chain_err(|| format!("opening {} for writing", disk))?;
-        gpt.write_into(&mut f)
-            .chain_err(|| format!("writing updated GPT to {}", disk))?;
-        Ok(())
     }
 
     pub fn update_gpt_headers(disk: &str) -> Result<()> {
@@ -546,6 +486,84 @@ impl Mount {
 
     pub fn get_partition_offsets(&self) -> Result<(u64, u64)> {
         Partition::get_offsets(&self.device)
+    }
+}
+
+#[derive(Debug)]
+pub struct SavedPartitions {
+    partitions: Vec<GptPart>,
+}
+
+impl SavedPartitions {
+    pub fn empty() -> Self {
+        Self {
+            partitions: Vec::new(),
+        }
+    }
+
+    pub fn new<P: AsRef<Path>>(disk: P) -> Result<Self> {
+        let disk = disk.as_ref();
+        let mut result = Self {
+            partitions: Vec::new(),
+        };
+
+        let mut f = OpenOptions::new()
+            .read(true)
+            .open(disk)
+            .chain_err(|| format!("opening {} for reading", disk.display()))?;
+        let gpt = match GPT::find_from(&mut f) {
+            Ok(gpt) => gpt,
+            Err(_) => return Ok(result),
+        };
+
+        let mut uidx = 0;
+        for (_, p) in gpt.iter() {
+            if p.is_used() {
+                if uidx > 3 {
+                    result.partitions.push(GptPart {
+                        idx: uidx + 1,
+                        partition_type: p.partition_type_guid,
+                        guid: p.unique_parition_guid,
+                        start_lba: p.starting_lba,
+                        end_lba: p.ending_lba,
+                        attributes: p.attribute_bits,
+                        name: p.partition_name.to_string(),
+                    });
+                }
+                uidx += 1;
+            }
+        }
+        Ok(result)
+    }
+
+    pub fn write<P: AsRef<Path>>(self, disk: P) -> Result<()> {
+        let disk = disk.as_ref();
+        let mut f = OpenOptions::new()
+            .read(true)
+            .open(disk)
+            .chain_err(|| format!("opening {} for reading", disk.display()))?;
+        let mut gpt = GPT::find_from(&mut f)
+            .chain_err(|| format!("reading GPT partitions on {}", disk.display()))?;
+
+        for p in self.partitions {
+            println!("Adding {} into slot {}", p.name, p.idx);
+            gpt[p.idx] = GPTPartitionEntry {
+                starting_lba: p.start_lba,
+                ending_lba: p.end_lba,
+                attribute_bits: p.attributes,
+                partition_name: p.name[..].into(),
+                partition_type_guid: p.partition_type,
+                unique_parition_guid: p.guid,
+            };
+        }
+
+        let mut f = OpenOptions::new()
+            .write(true)
+            .open(disk)
+            .chain_err(|| format!("opening {} for writing", disk.display()))?;
+        gpt.write_into(&mut f)
+            .chain_err(|| format!("writing updated GPT to {}", disk.display()))?;
+        Ok(())
     }
 }
 

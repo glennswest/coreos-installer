@@ -67,8 +67,8 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     ensure_exclusive_access(&config.device)
         .chain_err(|| format!("checking for exclusive access to {}", &config.device))?;
 
-    let mut extrapart = Disk::get_extra_gptpartitions(&config.device)?;
-    println!("Extra Partitions = {}\n", extrapart.len());
+    // save partitions that we plan to keep
+    let mut saved = SavedPartitions::new(&config.device)?;
 
     // get reference to partition table
     // For kpartx partitioning, this will conditionally call kpartx -d
@@ -80,7 +80,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     if config.wipedisk {
         println!("Erasing partition table\n");
         clear_partition_table(&mut dest, &mut *table)?;
-        extrapart.truncate(0);
+        saved = SavedPartitions::empty();
     }
 
     // copy and postprocess disk image
@@ -96,7 +96,8 @@ pub fn install(config: &InstallConfig) -> Result<()> {
             eprintln!("Preserving partition table as requested");
         } else {
             clear_partition_table(&mut dest, &mut *table)?;
-            Disk::add_extra_gptpartitions(&config.device, extrapart)
+            saved
+                .write(&config.device)
                 .chain_err(|| "restoring additional partitions")?;
         }
 
@@ -107,7 +108,8 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     // Make sure end_lba and partition table is consistent
     Disk::update_gpt_headers(&config.device)?;
 
-    Disk::add_extra_gptpartitions(&config.device, extrapart)
+    saved
+        .write(&config.device)
         .chain_err(|| "restoring additional partitions")?;
     eprintln!("Install complete.");
     Ok(())
