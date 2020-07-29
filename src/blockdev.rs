@@ -221,10 +221,10 @@ impl Disk {
                         name: p.partition_name.to_string(),
                     });
                 }
-                uidx = uidx + 1;
+                uidx += 1;
             }
         }
-        return result;
+        result
     }
 
     pub fn add_extra_gptpartitions(disk: &str, extra_parts: Vec<GptPart>) -> Result<()> {
@@ -249,7 +249,7 @@ impl Disk {
             .expect("Cannot open device for write");
         gpt.write_into(&mut f).expect("Cannot write data into gpt");
         drop(f);
-        return Ok(());
+        Ok(())
     }
 
     pub fn update_gpt_headers(disk: &str) {
