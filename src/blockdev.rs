@@ -40,17 +40,6 @@ pub struct Disk {
     pub path: String,
 }
 
-#[derive(Debug)]
-pub struct GptPart {
-    pub idx: u32,
-    pub partition_type: [u8; 16],
-    pub guid: [u8; 16],
-    pub start_lba: u64,
-    pub end_lba: u64,
-    pub attributes: u64,
-    pub name: String,
-}
-
 impl Disk {
     pub fn new(path: &str) -> Self {
         Disk {
@@ -491,7 +480,7 @@ impl Mount {
 
 #[derive(Debug)]
 pub struct SavedPartitions {
-    partitions: Vec<GptPart>,
+    partitions: Vec<(u32, GPTPartitionEntry)>,
 }
 
 impl SavedPartitions {
@@ -520,15 +509,7 @@ impl SavedPartitions {
         for (_, p) in gpt.iter() {
             if p.is_used() {
                 if uidx > 3 {
-                    result.partitions.push(GptPart {
-                        idx: uidx + 1,
-                        partition_type: p.partition_type_guid,
-                        guid: p.unique_parition_guid,
-                        start_lba: p.starting_lba,
-                        end_lba: p.ending_lba,
-                        attributes: p.attribute_bits,
-                        name: p.partition_name.to_string(),
-                    });
+                    result.partitions.push((uidx + 1, p.clone()));
                 }
                 uidx += 1;
             }
@@ -545,16 +526,9 @@ impl SavedPartitions {
         let mut gpt = GPT::find_from(&mut f)
             .chain_err(|| format!("reading GPT partitions on {}", disk.display()))?;
 
-        for p in self.partitions {
-            println!("Adding {} into slot {}", p.name, p.idx);
-            gpt[p.idx] = GPTPartitionEntry {
-                starting_lba: p.start_lba,
-                ending_lba: p.end_lba,
-                attribute_bits: p.attributes,
-                partition_name: p.name[..].into(),
-                partition_type_guid: p.partition_type,
-                unique_parition_guid: p.guid,
-            };
+        for (i, p) in self.partitions {
+            println!("Adding {} into slot {}", p.partition_name, i);
+            gpt[i] = p;
         }
 
         let mut f = OpenOptions::new()
