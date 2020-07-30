@@ -106,7 +106,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     }
 
     // Make sure end_lba and partition table is consistent
-    Disk::update_gpt_headers(&config.device)?;
+    Disk::new(&config.device).update_gpt_headers()?;
 
     saved
         .write(&config.device)
