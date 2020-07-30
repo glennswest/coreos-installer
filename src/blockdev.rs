@@ -505,13 +505,9 @@ impl SavedPartitions {
             Err(_) => return Ok(result),
         };
 
-        let mut uidx = 0;
-        for (_, p) in gpt.iter() {
-            if p.is_used() {
-                if uidx > 3 {
-                    result.partitions.push((uidx + 1, p.clone()));
-                }
-                uidx += 1;
+        for (i, p) in gpt.iter() {
+            if p.is_used() && i > 4 {
+                result.partitions.push((i, p.clone()));
             }
         }
         Ok(result)
