@@ -712,6 +712,7 @@ mod tests {
     use super::*;
     use maplit::hashmap;
     use std::io::Read;
+    use tempfile::{Builder, NamedTempFile};
     use xz2::read::XzDecoder;
 
     #[test]
@@ -800,6 +801,126 @@ mod tests {
                     test.name, test.result, result
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_saved_partitions() {
+        let make_part = |i: u32, name: &str, start: u64, end: u64| {
+            (
+                i,
+                GPTPartitionEntry {
+                    partition_type_guid: make_guid(0),
+                    unique_parition_guid: make_guid(i as u8),
+                    starting_lba: start * 2048,
+                    ending_lba: end * 2048 - 1,
+                    attribute_bits: 0,
+                    partition_name: name.into(),
+                },
+            )
+        };
+
+        let base_parts = vec![
+            make_part(1, "one", 1, 1024),
+            make_part(2, "two", 1024, 2048),
+            make_part(3, "three", 2048, 3072),
+            make_part(4, "four", 3072, 4096),
+            make_part(5, "five", 4096, 5120),
+            make_part(7, "seven", 5120, 6144),
+            make_part(8, "eight", 6144, 7168),
+        ];
+        let image_parts = vec![
+            make_part(1, "boot", 1, 384),
+            make_part(2, "EFI-SYSTEM", 384, 512),
+            make_part(4, "root", 1024, 3200),
+        ];
+
+        let tests = vec![vec![
+            make_part(1, "boot", 1, 384),
+            make_part(2, "EFI-SYSTEM", 384, 512),
+            make_part(4, "root", 1024, 3200),
+            make_part(5, "five", 4096, 5120),
+            make_part(7, "seven", 5120, 6144),
+            make_part(8, "eight", 6144, 7168),
+        ]];
+
+        let base = make_disk(&base_parts);
+        for (testnum, test) in tests.iter().enumerate() {
+            let saved = SavedPartitions::new(base.path()).unwrap();
+            let mut disk = make_disk(&image_parts);
+            saved.write(disk.path()).unwrap();
+
+            let result = GPT::find_from(&mut disk).unwrap();
+            assert_partitions_eq(test, &result, &format!("test {}", testnum));
+        }
+    }
+
+    fn make_disk(partitions: &Vec<(u32, GPTPartitionEntry)>) -> NamedTempFile {
+        let mut disk = Builder::new()
+            .prefix("coreos-installer-blockdev-")
+            .tempfile()
+            .unwrap();
+        disk.as_file().set_len(10 * 1024 * 1024 * 1024).unwrap();
+
+        let mut gpt = GPT::new_from(&mut disk, 512, make_guid(0)).unwrap();
+        for (partnum, entry) in partitions {
+            gpt[*partnum] = entry.clone();
+        }
+        gpt.write_into(&mut disk).unwrap();
+        disk
+    }
+
+    fn make_guid(seed: u8) -> [u8; 16] {
+        return [seed, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    }
+
+    fn assert_partitions_eq(expected: &Vec<(u32, GPTPartitionEntry)>, found: &GPT, message: &str) {
+        // GPTPartitionEntry doesn't derive PartialEq.  Compare by hand.
+        // first check that indexes are equal
+        assert_eq!(
+            expected.iter().map(|(i, _)| *i).collect::<Vec<u32>>(),
+            found
+                .iter()
+                .filter(|(_, e)| e.is_used())
+                .map(|(i, _)| i)
+                .collect::<Vec<u32>>(),
+            "{}",
+            message
+        );
+        // check contents
+        for (i, entry) in expected {
+            assert_eq!(
+                entry.partition_name.as_str(),
+                found[*i].partition_name.as_str(),
+                "{}, partition {}",
+                message,
+                i
+            );
+            assert_eq!(
+                entry.partition_type_guid, found[*i].partition_type_guid,
+                "{}, partition {}",
+                message, i
+            );
+            assert_eq!(
+                entry.unique_parition_guid, found[*i].unique_parition_guid,
+                "{}, partition {}",
+                message, i
+            );
+            assert_eq!(
+                entry.starting_lba, found[*i].starting_lba,
+                "{}, partition {}",
+                message, i
+            );
+            assert_eq!(
+                entry.ending_lba, found[*i].ending_lba,
+                "{}, partition {}",
+                message, i
+            );
+            assert_eq!(
+                entry.attribute_bits, found[*i].attribute_bits,
+                "{}, partition {}",
+                message, i
+            );
         }
     }
 }
