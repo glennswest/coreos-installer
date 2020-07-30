@@ -810,8 +810,8 @@ mod tests {
             (
                 i,
                 GPTPartitionEntry {
-                    partition_type_guid: make_guid(0),
-                    unique_parition_guid: make_guid(i as u8),
+                    partition_type_guid: make_guid("type"),
+                    unique_parition_guid: make_guid(name),
                     starting_lba: start * 2048,
                     ending_lba: end * 2048 - 1,
                     attribute_bits: 0,
@@ -862,7 +862,7 @@ mod tests {
             .unwrap();
         disk.as_file().set_len(10 * 1024 * 1024 * 1024).unwrap();
 
-        let mut gpt = GPT::new_from(&mut disk, 512, make_guid(0)).unwrap();
+        let mut gpt = GPT::new_from(&mut disk, 512, make_guid("disk")).unwrap();
         for (partnum, entry) in partitions {
             gpt[*partnum] = entry.clone();
         }
@@ -870,8 +870,12 @@ mod tests {
         disk
     }
 
-    fn make_guid(seed: u8) -> [u8; 16] {
-        return [seed, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    fn make_guid(seed: &str) -> [u8; 16] {
+        let mut guid = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        for (i, b) in seed.as_bytes().iter().enumerate() {
+            guid[i % guid.len()] ^= *b;
+        }
+        guid
     }
 
     fn assert_partitions_eq(expected: &Vec<(u32, GPTPartitionEntry)>, found: &GPT, message: &str) {
