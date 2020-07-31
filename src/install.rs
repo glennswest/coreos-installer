@@ -80,7 +80,7 @@ pub fn install(config: &InstallConfig) -> Result<()> {
     // copy and postprocess disk image
     // On failure, clear and reread the partition table to prevent the disk
     // from accidentally being used.
-    if let Err(err) = write_disk(&config, &mut source, &mut dest, &mut *table) {
+    if let Err(err) = write_disk(&config, &mut source, &mut dest, &mut *table, &saved) {
         // log the error so the details aren't dropped if we encounter
         // another error during cleanup
         eprint!("{}", ChainedError::display_chain(&err));
@@ -99,9 +99,6 @@ pub fn install(config: &InstallConfig) -> Result<()> {
         bail!("install failed");
     }
 
-    saved
-        .write(&config.device)
-        .chain_err(|| "restoring additional partitions")?;
     eprintln!("Install complete.");
     Ok(())
 }
@@ -135,6 +132,7 @@ fn write_disk(
     source: &mut ImageSource,
     dest: &mut File,
     table: &mut dyn PartTable,
+    saved: &SavedPartitions,
 ) -> Result<()> {
     // Get sector size of destination, for comparing with image
     let sector_size = get_sector_size(dest)?;
@@ -154,6 +152,11 @@ fn write_disk(
         true,
         Some(sector_size),
     )?;
+
+    // restore saved partitions, if any, and reread table
+    saved
+        .write(&config.device)
+        .chain_err(|| "restoring saved partitions")?;
     table.reread()?;
 
     // postprocess
