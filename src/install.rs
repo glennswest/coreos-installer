@@ -430,7 +430,12 @@ fn clear_partition_table(dest: &mut File, table: &mut dyn PartTable) -> Result<(
         .chain_err(|| "seeking to start of disk")?;
     let zeroes: [u8; 1024 * 1024] = [0; 1024 * 1024];
     dest.write_all(&zeroes)
-        .chain_err(|| "clearing partition table")?;
+        .chain_err(|| "clearing primary partition table")?;
+    // and now the backup GPT
+    dest.seek(SeekFrom::End(-(zeroes.len() as i64)))
+        .chain_err(|| "seeking to end of disk")?;
+    dest.write_all(&zeroes)
+        .chain_err(|| "clearing backup partition table")?;
     dest.flush()
         .chain_err(|| "flushing partition table to disk")?;
     dest.sync_all()
